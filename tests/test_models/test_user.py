@@ -90,7 +90,7 @@ class TestUserInstances(unittest.TestCase):
         actual = 1
         try:
             serialized = json.dumps(self.user_json)
-        except:
+        except Exception as e:
             actual = 0
         self.assertTrue(1 == actual)
 
@@ -105,13 +105,14 @@ class TestUserInstances(unittest.TestCase):
 
     def test_email_attribute(self):
         """... add email attribute"""
-        self.user.email = "bettyholbertn@gmail.com"
+        self.user.email = "test_alx@gmail.com"
         if hasattr(self.user, 'email'):
             actual = self.user.email
         else:
             actual = ''
-        expected = "bettyholbertn@gmail.com"
+        expected = "test_alx@gmail.com"
         self.assertEqual(expected, actual)
+
 
 if __name__ == '__main__':
     unittest.main
