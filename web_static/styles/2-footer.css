@@ -1,13 +1,11 @@
 footer {
-    height: 60px;
-    background-color: #00FF00;
-    position: absolute;
-    width: 100%;
-    bottom: 0;
     left: 0;
-}
-
-p {
+    bottom: 0;
+    position: absolute;
+    bottom: 0px;
+    background-color: white;
+    height: 60px;
+    width: 100%;
     text-align: center;
-    padding: 6px;
+    border-top: 1px solid #CCCCCC;
 }

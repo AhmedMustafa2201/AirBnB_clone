@@ -1,66 +1,37 @@
 #!/usr/bin/python3
 """
-Unit tests for console using Mock module from python standard library
-Checks console for capturing stdout into a StringIO object
+Unit Test for BaseModel Class
 """
-
-import os
-import sys
 import unittest
-from unittest.mock import create_autospec, patch
-from io import StringIO
-from console import HBNBCommand
-from models import storage
-from models.base_model import BaseModel
-from models.user import User
-from models.state import State
-from models.city import City
-from models.amenity import Amenity
-from models.place import Place
-from models.review import Review
+from datetime import datetime
+import console
+import json
+
+HBNBCommand = console.HBNBCommand
 
 
-class TestConsole(unittest.TestCase):
-    """
-    Unittest for the console model
-    """
+class TestHBNBCommandDocs(unittest.TestCase):
+    """Class for testing BaseModel docs"""
 
-    def setUp(self):
-        """Redirecting stdin and stdout"""
-        self.mock_stdin = create_autospec(sys.stdin)
-        self.mock_stdout = create_autospec(sys.stdout)
-        self.err = ["** class name missing **",
-                    "** class doesn't exist **",
-                    "** instance id missing **",
-                    "** no instance found **",
-                    ]
+    @classmethod
+    def setUpClass(cls):
+        print('\n\n.................................')
+        print('..... Testing Documentation .....')
+        print('.......  For the Console  .......')
+        print('.................................\n\n')
 
-        self.cls = ["BaseModel",
-                    "User",
-                    "State",
-                    "City",
-                    "Place",
-                    "Amenity",
-                    "Review"]
+    def test_doc_file(self):
+        """... documentation for the file"""
+        expected = '\nCommand interpreter for Holberton AirBnB project\n'
+        actual = console.__doc__
+        self.assertEqual(expected, actual)
 
-    def create(self, server=None):
-        """
-        Redirects stdin and stdout to the mock module
-        """
-        return HBNBCommand(stdin=self.mock_stdin, stdout=self.mock_stdout)
-
-    def last_write(self, nr=None):
-        """Returns last n output lines"""
-        if nr is None:
-            return self.mock_stdout.write.call_args[0][0]
-        return "".join(map(lambda c: c[0][0],
-                           self.mock_stdout.write.call_args_list[-nr:]))
-
-    def test_quit(self):
-        """Quit command"""
-        cli = self.create()
-        self.assertTrue(cli.onecmd("quit"))
+    def test_doc_class(self):
+        """... documentation for the class"""
+        expected = 'Command inerpreter class'
+        actual = HBNBCommand.__doc__
+        self.assertEqual(expected, actual)
 
 
 if __name__ == '__main__':
-    unittest.main()
+    unittest.main

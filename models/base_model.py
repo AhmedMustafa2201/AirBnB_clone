@@ -1,78 +1,70 @@
 #!/usr/bin/python3
 """
-Custom base class for the entire project
+BaseModel Class of Models Module
 """
 
-from uuid import uuid4
-from datetime import datetime
+import json
 import models
+from uuid import uuid4, UUID
+from datetime import datetime
+
+now = datetime.now
+strptime = datetime.strptime
+
 
 class BaseModel:
-    """Custom base for all the classes in the AirBnb console project
-
-    Arttributes:
-        id(str): handles unique user identity
-        created_at: assigns current datetime
-        updated_at: updates current datetime
-
-    Methods:
-        __str__: prints the class name, id, and creates dictionary
-        representations of the input values
-        save(self): updates instance arttributes with current datetime
-        to_dict(self): returns the dictionary values of the instance obj
-
-    """
+    """attributes and functions for BaseModel class"""
 
     def __init__(self, *args, **kwargs):
-        """Public instance artributes initialization
-        after creation
-
-        Args:
-            *args(args): arguments
-            **kwargs(dict): attrubute values
-
-        """
-        DATE_TIME_FORMAT = '%Y-%m-%dT%H:%M:%S.%f'
-        if not kwargs:
-            self.id = str(uuid4())
-            self.created_at = datetime.utcnow()
-            self.updated_at = datetime.utcnow()
-            models.storage.new(self)
+        """instantiation of new BaseModel Class"""
+        if kwargs:
+            self.__set_attributes(kwargs)
         else:
-            for key, value in kwargs.items():
-                if key in ("updated_at", "created_at"):
-                    self.__dict__[key] = datetime.strptime(
-                        value, DATE_TIME_FORMAT)
-                elif key[0] == "id":
-                    self.__dict__[key] = str(value)
-                else:
-                    self.__dict__[key] = value
+            self.id = str(uuid4())
+            self.created_at = now()
+            models.storage.new(self)
 
-    def __str__(self):
-        """
-        Returns string representation of the class
-        """
-        return "[{}] ({}) {}".format(self.__class__.__name__,
-                                     self.id, self.__dict__)
+    def __set_attributes(self, d):
+        """converts kwargs values to python class attributes"""
+        if not isinstance(d['created_at'], datetime):
+            d['created_at'] = strptime(d['created_at'], "%Y-%m-%d %H:%M:%S.%f")
+        if 'updated_at' in d:
+            if not isinstance(d['updated_at'], datetime):
+                d['updated_at'] = strptime(d['updated_at'],
+                                           "%Y-%m-%d %H:%M:%S.%f")
+        if d['__class__']:
+            d.pop('__class__')
+        self.__dict__ = d
+
+    def __is_serializable(self, obj_v):
+        """checks if object is serializable"""
+        try:
+            nada = json.dumps(obj_v)
+            return True
+        except Exception as e:
+            return False
+
+    def bm_update(self, name, value):
+        setattr(self, name, value)
+        self.save()
 
     def save(self):
-        """
-        Updates the public instance attribute:
-        'updated_at' - with the current datetime
-        """
-        self.updated_at = datetime.utcnow()
+        """updates attribute updated_at to current time"""
+        self.updated_at = now()
         models.storage.save()
 
-    def to_dict(self):
-        """
-        Method returns a dictionary containing all 
-        keys/values of __dict__ instance
-        """
-        map_objects = {}
-        for key, value in self.__dict__.items():
-            if key == "created_at" or key == "updated_at":
-                map_objects[key] = value.isoformat()
+    def to_json(self):
+        """returns json representation of self"""
+        bm_dict = {}
+        for k, v in (self.__dict__).items():
+            if (self.__is_serializable(v)):
+                bm_dict[k] = v
             else:
-                map_objects[key] = value
-        map_objects["__class__"] = self.__class__.__name__
-        return map_objects
+                bm_dict[k] = str(v)
+        bm_dict["__class__"] = type(self).__name__
+        return(bm_dict)
+
+    def __str__(self):
+        """returns string type representation of object instance"""
+        cname = type(self).__name__
+        return "[{}] ({}) {}".format(cname, self.id, self.__dict__)

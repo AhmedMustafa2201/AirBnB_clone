@@ -1,21 +1,19 @@
 #!/usr/bin/python3
 """
-Defines the User class.
+User Class from Models Module
 """
+
 from models.base_model import BaseModel
 
 
 class User(BaseModel):
-    """Represent a User
+    """User class handles all application users"""
 
-    Attributes:
-        email (str): user email
-        password (str): user password
-        first_name (str): first name
-        last_name (str): last name
+    email = ''
+    password = ''
+    first_name = ''
+    last_name = ''
 
-    """
-    email = ""
-    password = ""
-    first_name = ""
-    last_name = ""
+    def __init__(self, *args, **kwargs):
+        """instantiates a new user"""
+        super().__init__(self, *args, **kwargs)
