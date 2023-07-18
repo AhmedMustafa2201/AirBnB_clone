@@ -1,265 +1,208 @@
 #!/usr/bin/python3
-"""
-Command interpreter for Holberton AirBnB project
-"""
-import cmd
-from models import base_model, user, storage, CNC
 
-BaseModel = base_model.BaseModel
-User = user.User
-FS = storage
+"""Defines the HBnB console."""
+import cmd
+import re
+from shlex import split
+from models import storage
+from models.base_model import BaseModel
+from models.user import User
+from models.state import State
+from models.city import City
+from models.place import Place
+from models.amenity import Amenity
+from models.review import Review
+
+
+def parse(arg):
+    curly_braces = re.search(r"\{(.*?)\}", arg)
+    brackets = re.search(r"\[(.*?)\]", arg)
+    if curly_braces is None:
+        if brackets is None:
+            return [i.strip(",") for i in split(arg)]
+        else:
+            lexer = split(arg[:brackets.span()[0]])
+            retl = [i.strip(",") for i in lexer]
+            retl.append(brackets.group())
+            return retl
+    else:
+        lexer = split(arg[:curly_braces.span()[0]])
+        retl = [i.strip(",") for i in lexer]
+        retl.append(curly_braces.group())
+        return retl
 
 
 class HBNBCommand(cmd.Cmd):
-    """Command inerpreter class"""
-    prompt = '(hbnb) '
-    ERR = [
-        '** class name missing **',
-        "** class doesn't exist **",
-        '** instance id missing **',
-        '** no instance found **',
-        '** attribute name missing **',
-        '** value missing **',
-        ]
+    """Defines the HBNB command interpreter.
+    Attributes:
+        prompt (str): The command prompt.
+    """
 
-    def default(self, line):
-        """default response for unknown commands"""
-        pass
+    prompt = "(hbnb) "
+    __classes = {
+        "BaseModel",
+        "User",
+        "State",
+        "City",
+        "Place",
+        "Amenity",
+        "Review"
+    }
 
     def emptyline(self):
-        """Called when an empty line is entered in response to the prompt."""
+        """Do nothing upon receiving an empty line."""
         pass
 
-    def __class_err(self, arg):
-        """private: checks for missing class or unknown class"""
-        error = 0
-        if len(arg) == 0:
-            print(HBNBCommand.ERR[0])
-            error = 1
-        else:
-            if arg[0] not in CNC:
-                print(HBNBCommand.ERR[1])
-                error = 1
-        return error
+    def default(self, arg):
+        """Default behavior for cmd module when input is invalid"""
+        argdict = {
+            "all": self.do_all,
+            "show": self.do_show,
+            "destroy": self.do_destroy,
+            "count": self.do_count,
+            "update": self.do_update
+        }
+        match = re.search(r"\.", arg)
+        if match is not None:
+            argl = [arg[:match.span()[0]], arg[match.span()[1]:]]
+            match = re.search(r"\((.*?)\)", argl[1])
+            if match is not None:
+                command = [argl[1][:match.span()[0]], match.group()[1:-1]]
+                if command[0] in argdict.keys():
+                    call = "{} {}".format(argl[0], command[1])
+                    return argdict[command[0]](call)
+        print("*** Unknown syntax: {}".format(arg))
+        return False
 
-    def __id_err(self, arg):
-        """private checks for missing ID or unknown ID"""
-        error = 0
-        if (len(arg) < 2):
-            print(HBNBCommand.ERR[2])
-            error = 1
-        return error
-
-    def do_airbnb(self, arg):
-        """airbnb: airbnb
-        SYNOPSIS: Command to print arguments"""
-        print('** you found my test **')
-        arg = arg.split()
-        error = self.__class_err(arg)
-
-    def do_quit(self, line):
-        """quit: quit
-        USAGE: Command to quit the program
-        """
+    def do_quit(self, arg):
+        """Quit command to exit the program."""
         return True
 
-    def do_EOF(self, line):
-        """function to handle EOF"""
-        print()
+    def do_EOF(self, arg):
+        """EOF signal to exit the program."""
+        print("")
         return True
 
     def do_create(self, arg):
-        """create: create [ARG]
-        ARG = Class Name
-        SYNOPSIS: Creates a new instance of the Class from given input ARG"""
-        arg = arg.split()
-        error = self.__class_err(arg)
-        if not error:
-            for k, v in CNC.items():
-                if k == arg[0]:
-                    my_obj = v()
-                    my_obj.save()
-                    print(my_obj.id)
+        """Usage: create <class>
+        Create a new class instance and print its id.
+        """
+        argl = parse(arg)
+        if len(argl) == 0:
+            print("** class name missing **")
+        elif argl[0] not in HBNBCommand.__classes:
+            print("** class doesn't exist **")
+        else:
+            print(eval(argl[0])().id)
+            storage.save()
 
     def do_show(self, arg):
-        """show: show [ARG] [ARG1]
-        ARG = Class
-        ARG1 = ID #
-        SYNOPSIS: Prints object of given ID from given Class"""
-        arg = arg.split()
-        error = self.__class_err(arg)
-        if not error:
-            error += self.__id_err(arg)
-        if not error:
-            fs_o = FS.all()
-            for k, v in fs_o.items():
-                if arg[1] in k and arg[0] in k:
-                    print(v)
-                    return
-            print(HBNBCommand.ERR[3])
-
-    def do_all(self, arg):
-        """all: all [ARG]
-        ARG = Class
-        SYNOPSIS: prints all objects of given class"""
-        arg = arg.split()
-        error = 0
-        if arg:
-            error = self.__class_err(arg)
-        if not error:
-            print('[', end='')
-            fs_o = FS.all()
-            length = 0
-            if arg:
-                for v in fs_o.values():
-                    if type(v).__name__ == CNC[arg[0]].__name__:
-                        length += 1
-                c = 0
-                for v in fs_o.values():
-                    if type(v).__name__ == CNC[arg[0]].__name__:
-                        c += 1
-                        print(v, end=(', ' if c < l else ''))
-            else:
-                length = len(fs_o)
-                c = 0
-                for v in fs_o.values():
-                    print(v, end=(', ' if c < l else ''))
-            print(']')
+        """Usage: show <class> <id> or <class>.show(<id>)
+        Display the string representation of a class instance of a given id.
+        """
+        argl = parse(arg)
+        objdict = storage.all()
+        if len(argl) == 0:
+            print("** class name missing **")
+        elif argl[0] not in HBNBCommand.__classes:
+            print("** class doesn't exist **")
+        elif len(argl) == 1:
+            print("** instance id missing **")
+        elif "{}.{}".format(argl[0], argl[1]) not in objdict:
+            print("** no instance found **")
+        else:
+            print(objdict["{}.{}".format(argl[0], argl[1])])
 
     def do_destroy(self, arg):
-        """destroy: destroy [ARG] [ARG1]
-        ARG = Class
-        ARG1 = ID #
-        SYNOPSIS: destroys object of given ID from given Class"""
-        arg = arg.split()
-        error = self.__class_err(arg)
-        if not error:
-            error += self.__id_err(arg)
-        if not error:
-            fs_o = FS.all()
-            for k in fs_o.keys():
-                if arg[1] in k and arg[0] in k:
-                    del fs_o[k]
-                    FS.save()
-                    return
-            print(HBNBCommand.ERR[3])
-
-    def __rreplace(self, s, length):
-        for c in length:
-            s = s.replace(c, '')
-        return s
-
-    def __check_dict(self, arg):
-        """checks if the arguments input has a dictionary"""
-        if '{' and '}' in arg:
-            length = arg.split('{')[1]
-            length = length.split(', ')
-            length = list(s.split(':') for s in length)
-            d = {}
-            for subl in length:
-                k = subl[0].strip('"\' {}')
-                v = subl[1].strip('"\' {}')
-                d[k] = v
-            return d
+        """Usage: destroy <class> <id> or <class>.destroy(<id>)
+        Delete a class instance of a given id."""
+        argl = parse(arg)
+        objdict = storage.all()
+        if len(argl) == 0:
+            print("** class name missing **")
+        elif argl[0] not in HBNBCommand.__classes:
+            print("** class doesn't exist **")
+        elif len(argl) == 1:
+            print("** instance id missing **")
+        elif "{}.{}".format(argl[0], argl[1]) not in objdict.keys():
+            print("** no instance found **")
         else:
-            return None
+            del objdict["{}.{}".format(argl[0], argl[1])]
+            storage.save()
 
-    def do_update(self, arg):
-        """update: update [ARG] [ARG1] [ARG2] [ARG3]
-        ARG = Class
-        ARG1 = ID #
-        ARG2 = attribute name
-        ARG3 = value of new attribute
-        SYNOPSIS: updates or adds a new attribute and value of given Class"""
-        d = self.__check_dict(arg)
-        arg = self.__rreplace(arg, [',', '"'])
-        arg = arg.split()
-        error = self.__class_err(arg)
-        if not error:
-            error += self.__id_err(arg)
-        if not error:
-            valid_id = 0
-            fs_o = FS.all()
-            for k in fs_o.keys():
-                if arg[1] in k and arg[0] in k:
-                    valid_id = 1
-                    key = k
-            if not valid_id:
-                print(HBNBCommand.ERR[3])
-            else:
-                if len(arg) < 3:
-                    print(HBNBCommand.ERR[4])
-                elif len(arg) < 4:
-                    print(HBNBCommand.ERR[5])
-                else:
-                    if not d:
-                        avalue = arg[3].strip('"')
-                        if avalue.isdigit():
-                            avalue = int(avalue)
-                        fs_o[key].bm_update(arg[2], avalue)
-                    else:
-                        for k, v in d.items():
-                            if v.isdigit():
-                                v = int(v)
-                            fs_o[key].bm_update(k, v)
+    def do_all(self, arg):
+        """Usage: all or all <class> or <class>.all()
+        Display string representations of all instances of a given class.
+        If no class is specified, displays all instantiated objects."""
+        argl = parse(arg)
+        if len(argl) > 0 and argl[0] not in HBNBCommand.__classes:
+            print("** class doesn't exist **")
+        else:
+            objl = []
+            for obj in storage.all().values():
+                if len(argl) > 0 and argl[0] == obj.__class__.__name__:
+                    objl.append(obj.__str__())
+                elif len(argl) == 0:
+                    objl.append(obj.__str__())
+            print(objl)
 
-    def do_BaseModel(self, arg):
-        """class method with .function() syntax"""
-        self.__parse_exec('BaseModel', arg)
-
-    def do_Amenity(self, arg):
-        """class method with .function() syntax"""
-        self.__parse_exec('Amenity', arg)
-
-    def do_City(self, arg):
-        """class method with .function() syntax"""
-        self.__parse_exec('City', arg)
-
-    def do_Place(self, arg):
-        """class method with .function() syntax"""
-        self.__parse_exec('Place', arg)
-
-    def do_Review(self, arg):
-        """class method with .function() syntax"""
-        self.__parse_exec('Review', arg)
-
-    def do_State(self, arg):
-        """class method with .function() syntax"""
-        self.__parse_exec('State', arg)
-
-    def do_User(self, arg):
-        """class method with .function() syntax"""
-        self.__parse_exec('User', arg)
-
-    def __count(self, arg):
-        args = arg.split()
-        fs_o = FS.all()
+    def do_count(self, arg):
+        """Usage: count <class> or <class>.count()
+        Retrieve the number of instances of a given class."""
+        argl = parse(arg)
         count = 0
-        for k in fs_o.keys():
-            if args[0] in k:
+        for obj in storage.all().values():
+            if argl[0] == obj.__class__.__name__:
                 count += 1
         print(count)
 
-    def __parse_exec(self, c, arg):
-        CMD_MATCH = {
-            '.all': self.do_all,
-            '.count': self.__count,
-            '.show': self.do_show,
-            '.destroy': self.do_destroy,
-            '.update': self.do_update,
-            '.create': self.do_create,
-        }
-        if '(' and ')' in arg:
-            check = arg.split('(')
-            new_arg = "{} {}".format(c, check[1][:-1])
-            for k, v in CMD_MATCH.items():
-                if k == check[0]:
-                    if ((',' or '"' in new_arg) and k != '.update'):
-                        new_arg = self.__rreplace(new_arg, ['"', ','])
-                    v(new_arg)
-                    return
-        self.default(arg)
+    def do_update(self, arg):
+        """ Usage: update <class> <id> <attribute_name> <attribute_value> or
+            <class>.update(<id>, <attribute_name>, <attribute_value>) or
+            <class>.update(<id>, <dictionary>)
+            Update a class instance of a given id by adding or updating
+            a given attribute key/value pair or dictionary. """
+
+        argl = parse(arg)
+        objdict = storage.all()
+
+        if len(argl) == 0:
+            print("** class name missing **")
+            return False
+        if argl[0] not in HBNBCommand.__classes:
+            print("** class doesn't exist **")
+            return False
+        if len(argl) == 1:
+            print("** instance id missing **")
+            return False
+        if "{}.{}".format(argl[0], argl[1]) not in objdict.keys():
+            print("** no instance found **")
+            return False
+        if len(argl) == 2:
+            print("** attribute name missing **")
+            return False
+        if len(argl) == 3 and not isinstance(eval(argl[2]), dict):
+            print("** value missing **")
+            return False
+
+        if len(argl) == 4:
+            obj = objdict["{}.{}".format(argl[0], argl[1])]
+            if argl[2] in obj.__class__.__dict__.keys():
+                valtype = type(obj.__class__.__dict__[argl[2]])
+                obj.__dict__[argl[2]] = valtype(argl[3])
+            else:
+                obj.__dict__[argl[2]] = argl[3]
+        elif isinstance(eval(argl[2]), dict):
+            obj = objdict["{}.{}".format(argl[0], argl[1])]
+            for k, v in eval(argl[2]).items():
+                if (k in obj.__class__.__dict__.keys() and
+                        type(obj.__class__.__dict__[k]) in {str, int, float}):
+                    valtype = type(obj.__class__.__dict__[k])
+                    obj.__dict__[k] = valtype(v)
+                else:
+                    obj.__dict__[k] = v
+        storage.save()
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     HBNBCommand().cmdloop()
