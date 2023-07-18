@@ -1,12 +1,4 @@
-#!/usr/bin/python3
-
-"""
-Initializes  the module global (singleton) variables
-"""
-
-from .engine.file_storage import FileStorage
-"""
-Retrieves the storage instance
-"""
+"""Module to create unique FileStorage."""
+from models.engine.file_storage import FileStorage
 storage = FileStorage()
 storage.reload()
